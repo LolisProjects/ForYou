@@ -35,7 +35,12 @@
       min-height: 100vh;
       min-height: 100dvh;
       margin: 0;
-      padding: 20px 14px 40px;
+      /*
+        El env() reserva la franja que iOS ocupa con la barra de Safari y el
+        indicador de inicio. Sin eso, el botón del final queda debajo de ellos
+        en un iPhone. En lo demás vale 0, así que no estorba.
+      */
+      padding: 20px 14px calc(40px + env(safe-area-inset-bottom, 0px));
       background: #d9d3c4;
       color: var(--tinta);
       font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
@@ -168,13 +173,14 @@
     }
 
     /*
-      Pegado al borde inferior con sticky: así sigue a la vista mientras se
-      recorre la tira, en lugar de quedarse atrás entre dos viñetas.
+      Va al final del marcado y en flujo normal, sin sticky.
+
+      No flota a propósito: flotando se empalmaba con el dibujo de la viñeta
+      de abajo. Y no hace falta, porque las viñetas sin revelar tienen
+      max-height 0, así que el botón siempre queda justo debajo de la última
+      viñeta visible sin tener que perseguirlo.
     */
     .chip {
-      position: sticky;
-      z-index: 30;
-      bottom: 12px;
       display: block;
       width: 100%;
       min-height: 48px;
@@ -203,12 +209,6 @@
 
     .chip.hidden {
       display: none;
-    }
-
-    /* En la última viñeta deja de flotar para no tapar el dibujo */
-    .chip.resting {
-      position: static;
-      box-shadow: 0 3px 0 var(--tinta);
     }
 
     /* Avisito para que se note que hay música, ya que no arranca sola */
@@ -1386,12 +1386,6 @@
         photoCaption.textContent = 'Misión cumplida. El pastel ya tiene dueño. Espero no hayas olvidado pedir un gran deseo al soplar las velitas. 😘';
         showPanel(3);
         chip.textContent = 'Leer otra vez ↺';
-        /*
-          Deja de flotar: en la última viñeta el botón tapaba el dibujo y
-          parecía el final de la página, así que no se notaba que faltaba
-          contenido abajo. Aquí ya puede quedarse quieto al final.
-        */
-        chip.classList.add('resting');
         step = 4;
         return;
       }
@@ -1426,7 +1420,7 @@
       cakeBtn.setAttribute('aria-label', 'Soplar las velitas');
 
       chip.textContent = 'Seguir leyendo →';
-      chip.classList.remove('hidden', 'resting');
+      chip.classList.remove('hidden');
       panels[0].scrollIntoView({
         behavior: reducedMotion() ? 'auto' : 'smooth',
         block: 'center'
