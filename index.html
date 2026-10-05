@@ -68,11 +68,15 @@
       overflow: hidden;
     }
 
+    /*
+      El relleno de abajo es generoso a propósito: deja sitio para que el botón
+      flotante descanse sin quedar encima del último dibujo.
+    */
     .page {
       position: relative;
       width: min(100%, 420px);
       margin: 0 auto;
-      padding: 10px 12px 18px;
+      padding: 10px 12px 26px;
       background:
         radial-gradient(ellipse at 36% 16%, var(--papel-claro) 0%, var(--papel) 58%, var(--papel-oscuro) 100%);
       box-shadow: 0 12px 30px rgba(50, 40, 25, 0.3);
@@ -199,6 +203,42 @@
 
     .chip.hidden {
       display: none;
+    }
+
+    /* En la última viñeta deja de flotar para no tapar el dibujo */
+    .chip.resting {
+      position: static;
+      box-shadow: 0 3px 0 var(--tinta);
+    }
+
+    /* Avisito para que se note que hay música, ya que no arranca sola */
+    .musicNudge {
+      position: fixed;
+      z-index: 50;
+      top: 64px;
+      right: 12px;
+      padding: 5px 11px;
+      border: 2px solid var(--tinta);
+      border-radius: 999px;
+      background: var(--papel-claro);
+      color: var(--tinta);
+      font-size: 11px;
+      font-weight: 700;
+      opacity: 0;
+      pointer-events: none;
+      animation: nudgeIn 0.4s ease 1.4s forwards;
+    }
+
+    @keyframes nudgeIn {
+      to {
+        opacity: 1;
+      }
+    }
+
+    .musicNudge.gone {
+      opacity: 0;
+      animation: none;
+      transition: opacity 0.3s ease;
     }
 
     .chip:focus-visible,
@@ -729,6 +769,12 @@
       aria-pressed="false"
     >🎵</button>
 
+    <!--
+      La música no arranca sola, así que hace falta avisar que existe. Este
+      globito aparece al segundo y se va en cuanto se toca el botón.
+    -->
+    <span class="musicNudge" id="musicNudge" aria-hidden="true">ponle música</span>
+
     <!-- Rotulación delineada, en SVG para poder temblarla como la de a mano -->
     <svg class="banner" viewBox="0 0 400 118" aria-hidden="true" focusable="false">
       <g font-family="Trebuchet MS, Segoe UI, sans-serif" font-weight="800"
@@ -1113,6 +1159,7 @@
     const confettiBox = document.getElementById('confetti');
     const musicBtn = document.getElementById('musicBtn');
     const musicPanel = document.getElementById('musicPanel');
+    const musicNudge = document.getElementById('musicNudge');
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
 
     /*
@@ -1315,12 +1362,16 @@
     }
 
     function onChip() {
-      /* Paso 0: arranca la música y muestra el pastel. */
-      if (step === 0) {
-        if (!musicPlaying && !musicManuallyPaused) {
-          requestMusicPlayback();
-        }
+      /*
+        Paso 0: muestra el pastel.
 
+        La música ya NO arranca sola. YouTube puede meter un anuncio antes de
+        la canción y con autoarranque eso era lo primero que se oía, sin que
+        nadie lo pidiera. Ahora la música es decisión de quien abre la tarjeta:
+        toca el botón 🎵 y, si cae anuncio, está viendo el reproductor y lo
+        puede saltar. Los anuncios no se pueden desactivar desde la API.
+      */
+      if (step === 0) {
         buildCandles();
         cakeText.textContent = `…ayudarte a apagar ${age} velitas. Sí, las conté una por una.`;
         updateCakeHint();
@@ -1330,11 +1381,17 @@
         return;
       }
 
-      /* Paso 3: la foto y el cierre. */
+      /* Paso 3: el cierre. */
       if (step === 3) {
         photoCaption.textContent = 'Misión cumplida. El pastel ya tiene dueño. Espero no hayas olvidado pedir un gran deseo al soplar las velitas. 😘';
         showPanel(3);
         chip.textContent = 'Leer otra vez ↺';
+        /*
+          Deja de flotar: en la última viñeta el botón tapaba el dibujo y
+          parecía el final de la página, así que no se notaba que faltaba
+          contenido abajo. Aquí ya puede quedarse quieto al final.
+        */
+        chip.classList.add('resting');
         step = 4;
         return;
       }
@@ -1369,7 +1426,7 @@
       cakeBtn.setAttribute('aria-label', 'Soplar las velitas');
 
       chip.textContent = 'Seguir leyendo →';
-      chip.classList.remove('hidden');
+      chip.classList.remove('hidden', 'resting');
       panels[0].scrollIntoView({
         behavior: reducedMotion() ? 'auto' : 'smooth',
         block: 'center'
@@ -1435,20 +1492,10 @@
       musicBtn.title = label;
     }
 
-    function requestMusicPlayback() {
-      showMusicPanel();
-      musicPlaybackRequested = true;
-
-      if (musicPlayer && musicReady) {
-        try {
-          musicPlayer.playVideo();
-        } catch (error) {
-          /* El reproductor visible permite iniciarla a mano. */
-        }
-      }
-    }
-
     function toggleMusicPlayback() {
+      /* Ya se enteró de que hay música: el avisito deja de hacer falta. */
+      musicNudge.classList.add('gone');
+
       if (!musicPlayer || !musicReady) {
         showMusicPanel();
         musicManuallyPaused = false;
